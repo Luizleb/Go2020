@@ -15,24 +15,12 @@ const (
 	Width  = 800
 	Height = 800
 	Title  = "Test LEB"
-
-	// Shaders
-	vertexShaderSource = `
-#version 410
-in vec3 vp;
-void main() {
-	gl_Position = vec4(vp, 1.0);
-}
-` + "\x00"
-
-	fragmentShaderSource = `
-#version 410
-out vec4 frag_colour;
-void main() {
-	frag_colour = vec4(1, 1, 1, 1);
-}
-` + "\x00"
 )
+
+// shaders
+var shaders = ShadersToString()
+var vertexShaderSource = shaders[vertex]
+var fragmentShaderSource = shaders[fragment]
 
 // CreateWindow sets up a new window and makes it the current context
 func CreateWindow() {
@@ -44,7 +32,7 @@ func CreateWindow() {
 	for !window.ShouldClose() {
 		vao := DrawRect(x, 100, 50, 120)
 		draw(vao, window, program)
-		x++
+		x += 0.1
 	}
 }
 
