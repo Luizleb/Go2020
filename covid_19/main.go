@@ -1,11 +1,13 @@
+// 30/12/2020
+
 package main
 
 import (
 	"fmt"
 	"image/color"
-	"log"
 	"math"
 	"math/rand"
+	"time"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/goregular"
@@ -20,21 +22,24 @@ const (
 	stepSize                  = 1
 	populationSize            = 10
 	infectionRadius           = 50
-	flagVelocity              = 0 // (1/0) used to set no velocity, if required
+	infectionRate             = 0.1 // probability to be infected if close to an infected person
+	flagVelocity              = 1   // (1/0) used to set no velocity, if required
+	timeInterval              = 1   // interval in seconds
 )
 
 var (
-	normalFont font.Face
-	green      = color.RGBA{10, 255, 55, 255}
-	red        = color.RGBA{255, 10, 55, 255}
-	population = make([]*person, populationSize)
-	grid       [screenWidth + 1][screenHeight + 1]int
+	normalFont    font.Face
+	green         = color.RGBA{10, 255, 55, 255}
+	red           = color.RGBA{255, 10, 55, 255}
+	population    = make([]*person, populationSize)
+	grid          [screenWidth + 1][screenHeight + 1]int
+	timeLastCheck time.Time
 )
 
 func init() {
 	tt, err := opentype.Parse(goregular.TTF)
 	if err != nil {
-		log.Fatalf("Parse: %v", err)
+		fmt.Printf("Parse: %v", err)
 	}
 	const dpi = 72
 	normalFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
@@ -42,7 +47,7 @@ func init() {
 		DPI:  dpi,
 	})
 	if err != nil {
-		log.Fatalf("NewFace: %v", err)
+		fmt.Printf("NewFace: %v", err)
 	}
 }
 
@@ -53,6 +58,12 @@ type Game struct{}
 func (g *Game) Update() error {
 	for _, p := range population {
 		p.move()
+		p.checkNeighbours()
+	}
+	if timeElapsed := time.Since(timeLastCheck); timeElapsed > timeInterval*time.Second {
+		timeLastCheck = time.Now()
+		fmt.Printf("Infected : %v\n", countInfected())
+		fmt.Printf("Healthy : %v\n", populationSize-countInfected())
 	}
 	return nil
 }
@@ -90,8 +101,7 @@ func createGrid() {
 func createPopulation() {
 	var sick bool
 	for i := 0; i < populationSize; i++ {
-		test := rand.Float64()
-		if test < 0.40 {
+		if test := rand.Float64(); test < 0.40 {
 			sick = true
 		} else {
 			sick = false
@@ -107,25 +117,42 @@ func (p person) checkNeighbours() int {
 		for j := math.Max(lower.y, 0); j < math.Min(upper.y, screenHeight); j++ {
 			if neighbourID := grid[int(i)][int(j)]; neighbourID != -1 && neighbourID != p.id && p.isSick {
 				if dist := (population[neighbourID].position).distance(p.position); dist < infectionRadius {
+					if p := population[neighbourID]; p.willGetInfection() {
+						p.isSick = true
+					}
 					count++
 				}
-				fmt.Printf("Person %v has %v neighbour(s)\n", p.id, count)
+				//fmt.Printf("Person %v has %v neighbour(s)\n", p.id, count)
 			}
 		}
 	}
+	return count
+}
 
+func (p person) willGetInfection() bool {
+	if prob := rand.Float64(); prob < infectionRate {
+		return true
+	}
+	return false
+}
+
+func countInfected() int {
+	count := 0
+	for _, p := range population {
+		if p.isSick {
+			count++
+		}
+	}
 	return count
 }
 
 func main() {
+	timeLastCheck = time.Now()
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Testing")
 	createGrid()
 	createPopulation()
-	for _, p := range population {
-		p.checkNeighbours()
-	}
 	if err := ebiten.RunGame(&Game{}); err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 }
