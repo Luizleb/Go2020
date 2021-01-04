@@ -1,5 +1,6 @@
 # Go2020
 Go studies in 2020
+
 1 - Gui : tentando usar openGl com Go. Usando como referências 
   1 - The Cherno;
   2 - Learn Modern OpenGL Programming - Steve Jones / Udemy;
