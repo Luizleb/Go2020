@@ -14,17 +14,17 @@ import (
 	"golang.org/x/image/font/opentype"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text"
 )
 
 const (
 	screenWidth, screenHeight = 640, 500
+	screenPadding             = 5 // limits at screen boundaries
 	stepSize                  = 1
-	populationSize            = 10
-	infectionRadius           = 50
-	infectionRate             = 0.1 // probability to be infected if close to an infected person
+	populationSize            = 50
+	infectionRadius           = 30
+	infectionRate             = 0.9 // probability to be infected if close to an infected person
 	flagVelocity              = 1   // (1/0) used to set no velocity, if required
-	timeInterval              = 1   // interval in seconds
+	timeInterval              = 2   // interval in seconds
 )
 
 var (
@@ -34,6 +34,7 @@ var (
 	population    = make([]*person, populationSize)
 	grid          [screenWidth + 1][screenHeight + 1]int
 	timeLastCheck time.Time
+	statusColor   color.RGBA
 )
 
 func init() {
@@ -58,6 +59,8 @@ type Game struct{}
 func (g *Game) Update() error {
 	for _, p := range population {
 		p.move()
+	}
+	for _, p := range population {
 		p.checkNeighbours()
 	}
 	if timeElapsed := time.Since(timeLastCheck); timeElapsed > timeInterval*time.Second {
@@ -73,15 +76,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//screen.Fill(color.White)
 	//ebitenutil.DebugPrint(screen, "Hello, World!")
 	for _, v := range population {
-		statusColor := green
 		if v.isSick {
 			statusColor = red
+		} else {
+			statusColor = green
 		}
 		screen.Set(int(v.position.x)+1, int(v.position.y), statusColor)
 		screen.Set(int(v.position.x)-1, int(v.position.y), statusColor)
 		screen.Set(int(v.position.x), int(v.position.y)-1, statusColor)
 		screen.Set(int(v.position.x), int(v.position.y)+1, statusColor)
-		text.Draw(screen, fmt.Sprint(v.id), normalFont, int(v.position.x+4), int(v.position.y+2), color.White)
+		//text.Draw(screen, fmt.Sprint(v.id), normalFont, int(v.position.x+4), int(v.position.y+2), color.White)
 	}
 }
 
@@ -91,8 +95,8 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func createGrid() {
-	for i := 0; i < screenWidth; i++ {
-		for j := 0; j < screenHeight; j++ {
+	for i := 0; i < screenWidth+1; i++ {
+		for j := 0; j < screenHeight+1; j++ {
 			grid[i][j] = -1
 		}
 	}
@@ -101,13 +105,14 @@ func createGrid() {
 func createPopulation() {
 	var sick bool
 	for i := 0; i < populationSize; i++ {
-		if test := rand.Float64(); test < 0.40 {
+		if test := rand.Float64(); test < 0.10 {
 			sick = true
 		} else {
 			sick = false
 		}
 		population[i] = createPerson(i, sick)
 	}
+	// fmt.Printf("Person 39 data : x=%v, y=%v, velx=%v and vely =%v\n", population[39].position.x, population[39].position.y, population[39].velocity.x, population[39].velocity.y)
 }
 
 func (p person) checkNeighbours() int {
