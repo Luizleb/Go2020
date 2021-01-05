@@ -3,10 +3,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"image/color"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 
 	"golang.org/x/image/font"
@@ -22,9 +24,10 @@ const (
 	stepSize                  = 1
 	populationSize            = 50
 	infectionRadius           = 30
-	infectionRate             = 0.9 // probability to be infected if close to an infected person
-	flagVelocity              = 1   // (1/0) used to set no velocity, if required
-	timeInterval              = 2   // interval in seconds
+	infectionRate             = 0.9                     // probability to be infected if close to an infected person
+	flagVelocity              = 1                       // (1/0) used to set no velocity, if required
+	timeInterval              = 2                       // interval in seconds
+	resHeader                 = "Day, Infected,Healthy" // header for the output csv file
 )
 
 var (
@@ -35,6 +38,8 @@ var (
 	grid          [screenWidth + 1][screenHeight + 1]int
 	timeLastCheck time.Time
 	statusColor   color.RGBA
+	results       [][]string
+	resultCounter int
 )
 
 func init() {
@@ -65,6 +70,12 @@ func (g *Game) Update() error {
 	}
 	if timeElapsed := time.Since(timeLastCheck); timeElapsed > timeInterval*time.Second {
 		timeLastCheck = time.Now()
+		var curRes []string
+		curRes = append(curRes, fmt.Sprint(resultCounter))
+		curRes = append(curRes, fmt.Sprint(countInfected()))
+		curRes = append(curRes, fmt.Sprint(populationSize-countInfected()))
+		results = append(results, curRes)
+		resultCounter++
 		fmt.Printf("Infected : %v\n", countInfected())
 		fmt.Printf("Healthy : %v\n", populationSize-countInfected())
 	}
@@ -151,12 +162,31 @@ func countInfected() int {
 	return count
 }
 
+// creates a csv file with the results
+func getResults() {
+	fmt.Println(len(results))
+	timeStamp := fmt.Sprintf("%d-%02d-%02d",
+		timeLastCheck.Year(), timeLastCheck.Month(), timeLastCheck.Day())
+	filename := "test" + timeStamp + ".csv"
+	f, err := os.Create(filename)
+	defer f.Close()
+	if err != nil {
+		fmt.Println("Failed to open file", err)
+	}
+	w := csv.NewWriter(f)
+	err = w.WriteAll(results)
+	if err != nil {
+		fmt.Println("Failed to write in file", err)
+	}
+}
+
 func main() {
 	timeLastCheck = time.Now()
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Testing")
 	createGrid()
 	createPopulation()
+	defer getResults()
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		fmt.Println(err)
 	}
