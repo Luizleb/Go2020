@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"golang.org/x/image/font"
@@ -40,6 +41,8 @@ var (
 	statusColor   color.RGBA
 	results       [][]string
 	resultCounter int
+	locker        sync.RWMutex
+	wg            sync.WaitGroup
 )
 
 func init() {
