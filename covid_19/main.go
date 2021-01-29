@@ -66,12 +66,26 @@ type Game struct{}
 // Update the world state
 func (g *Game) Update() error {
 	for _, p := range population {
-		p.move()
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, p *person) {
+			p.move()
+			wg.Done()
+		}(&wg, p)
 	}
+	wg.Wait()
+
 	for _, p := range population {
-		p.checkNeighbours()
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, p *person) {
+			p.checkNeighbours()
+			wg.Done()
+		}(&wg, p)
 	}
+	wg.Wait()
+
 	if timeElapsed := time.Since(timeLastCheck); timeElapsed > timeInterval*time.Second {
+		locker.Lock()
+
 		timeLastCheck = time.Now()
 		var curRes []string
 		curRes = append(curRes, fmt.Sprint(resultCounter))
@@ -81,6 +95,8 @@ func (g *Game) Update() error {
 		resultCounter++
 		fmt.Printf("Infected : %v\n", countInfected())
 		fmt.Printf("Healthy : %v\n", populationSize-countInfected())
+
+		locker.Unlock()
 	}
 	return nil
 }
@@ -130,6 +146,8 @@ func createPopulation() {
 }
 
 func (p person) checkNeighbours() int {
+	locker.RLock()
+	defer locker.RUnlock()
 	count := 0
 	lower, upper := p.position.addV(-infectionRadius), p.position.addV(infectionRadius)
 	for i := math.Max(lower.x, 0); i < math.Min(upper.x, screenWidth); i++ {

@@ -28,6 +28,9 @@ func createPerson(pid int, sick bool) *person {
 
 func (p *person) move() {
 
+	locker.Lock()
+	defer locker.Unlock()
+
 	if curx := p.position.x; curx < 0 || curx >= screenWidth+1 {
 		fmt.Printf("Person %v is H outside : x = %v , y = %v\n", p.id, p.position.x, p.position.y)
 	}
