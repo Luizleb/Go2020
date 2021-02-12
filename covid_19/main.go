@@ -21,7 +21,8 @@ import (
 
 const (
 	screenWidth, screenHeight = 640, 500
-	screenPadding             = 5 // limits at screen boundaries
+	screenPadding             = 5  // limits at screen boundaries
+	walkingLimit              = 20 // square limits for a person to move : zero if no restrictions
 	stepSize                  = 1
 	populationSize            = 50
 	infectionRadius           = 30
